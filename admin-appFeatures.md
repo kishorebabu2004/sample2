@@ -14,94 +14,12 @@ The Admin application is mainly for a **product owner or Super Admin** who manag
 
 The following diagrams explain how the application behaves. They are intentionally written as HTML/CSS so that a Markdown viewer that supports inline HTML can render them as a visual guide. The tables below remain the detailed implementation reference.
 
-<style>
-.qconnect-visual { font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #17252b; max-width: 1100px; margin: 1.5rem 0; }
-.qconnect-visual * { box-sizing: border-box; }
-.qconnect-visual .eyebrow { color: #087f78; font-size: .78rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-.qconnect-visual h3 { margin: .35rem 0 1rem; font-size: 1.25rem; }
-.qconnect-visual .panel { border: 1px solid #d7e5e3; border-radius: 18px; padding: 1.25rem; margin: 1rem 0; background: linear-gradient(135deg,#f8fcfb,#f1f7f6); box-shadow: 0 8px 24px #173c4210; }
-.qconnect-visual .flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: .55rem; }
-.qconnect-visual .step { flex: 1 1 145px; min-width: 135px; padding: .85rem; border-radius: 12px; background: #fff; border: 1px solid #cde0dd; }
-.qconnect-visual .step strong { display:block; color:#087f78; font-size:.82rem; margin-bottom:.3rem; }
-.qconnect-visual .arrow { align-self:center; color:#e07842; font-size:1.4rem; font-weight:800; }
-.qconnect-visual .tree { display:grid; grid-template-columns: repeat(auto-fit,minmax(190px,1fr)); gap:.75rem; }
-.qconnect-visual .node { padding: .9rem 1rem; border-radius: 12px; background:#fff; border-left:5px solid #087f78; }
-.qconnect-visual .node b { display:block; margin-bottom:.35rem; }
-.qconnect-visual .node small { color:#587078; }
-.qconnect-visual .wireframes { display:grid; grid-template-columns:repeat(auto-fit,minmax(270px,1fr)); gap:1rem; }
-.qconnect-visual .screen { overflow:hidden; border:1px solid #cbdedb; border-radius:14px; background:#fff; }
-.qconnect-visual .topbar { padding:.7rem 1rem; background:#173c42; color:#fff; font-weight:700; }
-.qconnect-visual .body { display:grid; grid-template-columns:76px 1fr; min-height:145px; }
-.qconnect-visual .side { background:#e7f1ef; padding:.7rem .4rem; color:#35636a; font-size:.7rem; line-height:2.1; }
-.qconnect-visual .content { padding:1rem; }
-.qconnect-visual .line { height:10px; border-radius:8px; background:#dceae8; margin:.55rem 0; }
-.qconnect-visual .line.short { width:55%; }
-.qconnect-visual .cards { display:grid; grid-template-columns:repeat(3,1fr); gap:.45rem; margin-top:.8rem; }
-.qconnect-visual .card { height:38px; border-radius:8px; background:#edf5f3; }
-</style>
+> **GitHub Preview Note**
+>
+> GitHub strips `<style>` tags and most custom CSS from Markdown for security reasons.
+> The original visual HTML/CSS section has been removed because it cannot render correctly in GitHub's preview.
+> If you want visual diagrams on GitHub, use Mermaid diagrams, Markdown tables, or images instead.
 
-<div class="qconnect-visual">
-  <div class="panel">
-    <div class="eyebrow">System overview</div>
-    <h3>Who uses what?</h3>
-    <div class="flow">
-      <div class="step"><strong>Super Admin</strong>Signs in and controls the product.</div><div class="arrow">→</div>
-      <div class="step"><strong>Admin Frontend</strong>Astro pages plus hydrated React forms.</div><div class="arrow">→</div>
-      <div class="step"><strong>Admin Backend</strong>Fastify APIs authenticate and apply business rules.</div><div class="arrow">→</div>
-      <div class="step"><strong>PostgreSQL + Redis</strong>Permanent records plus short-lived sessions.</div>
-    </div>
-  </div>
-
-  <div class="panel">
-    <div class="eyebrow">Authentication sequence</div>
-    <h3>Google login: browser to protected dashboard</h3>
-    <div class="flow">
-      <div class="step"><strong>1 · Browser</strong>Opens <code>/login</code>. Astro checks the token cookie.</div><div class="arrow">→</div>
-      <div class="step"><strong>2 · Google</strong>User selects an account; Google returns an ID token to the React button.</div><div class="arrow">→</div>
-      <div class="step"><strong>3 · API</strong>Frontend posts <code>{ token }</code> to <code>/auth/loginWithGoogle</code>.</div><div class="arrow">→</div>
-      <div class="step"><strong>4 · Backend</strong>Verifies the ID token, extracts email, and searches <code>adminUser</code>.</div><div class="arrow">→</div>
-      <div class="step"><strong>5 · Session</strong>Creates a JWT, stores a Redis session, sets an HttpOnly cookie, and redirects to <code>/dashboard</code>.</div>
-    </div>
-  </div>
-
-  <div class="panel">
-    <div class="eyebrow">Business hierarchy</div>
-    <h3>How the managed data is connected</h3>
-    <div class="tree">
-      <div class="node"><b>Institution</b><small>Backend: Enterprise<br>Owns colleges and organization details.</small></div>
-      <div class="node"><b>College</b><small>Backend: Workspace<br>Owns users, roles, plans, and college context.</small></div>
-      <div class="node"><b>Users & staff</b><small>Normal <code>User</code> records connected through workspace and role relations.</small></div>
-      <div class="node"><b>Roles & permissions</b><small>Modules and actions define what a college user may do.</small></div>
-      <div class="node"><b>Plans</b><small>Features, credits, and active subscriptions control access.</small></div>
-      <div class="node"><b>Question bank</b><small>Shared general, MCQ, and coding question content.</small></div>
-    </div>
-  </div>
-
-  <div class="panel">
-    <div class="eyebrow">Frontend route tree</div>
-    <h3>How the Admin pages are grouped</h3>
-    <div class="tree">
-      <div class="node"><b>/login</b><small>Public entry point<br>Google and email/password authentication.</small></div>
-      <div class="node"><b>/dashboard</b><small>Protected landing page<br>Currently a welcome placeholder.</small></div>
-      <div class="node"><b>/manageInstitution</b><small>Institution list and <code>[institutionId]</code> detail/college view.</small></div>
-      <div class="node"><b>/manageColleges</b><small>College list and <code>[collegeId]</code> detail/users/roles/plans view.</small></div>
-      <div class="node"><b>/managePlans</b><small>Plan list, add, edit, detail, and college assignment.</small></div>
-      <div class="node"><b>/manageQuestions</b><small>Question list, add, edit, and question-type authoring.</small></div>
-      <div class="node"><b>/settings</b><small>Profile and password tabs.</small></div>
-      <div class="node"><b>/forgot-password</b><small>Recovery request, followed by <code>/set-password</code>.</small></div>
-    </div>
-  </div>
-
-  <div class="panel">
-    <div class="eyebrow">Page wireframes</div>
-    <h3>What the main screens are intended to look and feel like</h3>
-    <div class="wireframes">
-      <div class="screen"><div class="topbar">Login · public</div><div class="body"><div class="side">Brand<br>Help</div><div class="content"><b>Sign in to your account</b><div class="line"></div><div class="line"></div><div class="line short"></div><div class="cards"><div class="card"></div><div class="card"></div><div class="card"></div></div></div></div></div>
-      <div class="screen"><div class="topbar">Dashboard · protected</div><div class="body"><div class="side">Home<br>Institutions<br>Plans<br>Questions</div><div class="content"><b>Welcome to QConnect</b><div class="cards"><div class="card"></div><div class="card"></div><div class="card"></div></div><div class="line"></div><div class="line short"></div></div></div></div>
-      <div class="screen"><div class="topbar">College details · workspace</div><div class="body"><div class="side">Overview<br>Users<br>Roles<br>Plans</div><div class="content"><b>College information</b><div class="line"></div><div class="line"></div><div class="cards"><div class="card"></div><div class="card"></div><div class="card"></div></div></div></div></div>
-    </div>
-  </div>
-</div>
 
 ## 1. Simple overview
 
