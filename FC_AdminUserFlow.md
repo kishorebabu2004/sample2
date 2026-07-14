@@ -1,6 +1,6 @@
 # FC Labs Admin — User Flows and Screen Guide
 
-This document explains what a Super Admin does in the QConnect Admin application. It is written as a product-flow guide: each module describes the user goal, the screens involved, the API/data path, and the expected result.
+This document explains what a Super Admin does in the FC Labs Admin application. It also records the QConnect-to-FC-Labs migration so the removed Institution layer and the new learning-operations modules are easy to compare.
 
 > GitHub renders the Mermaid diagrams below automatically. The HTML wireframes are intentionally simple so they remain readable in GitHub and other Markdown viewers.
 
@@ -10,42 +10,53 @@ This document explains what a Super Admin does in the QConnect Admin application
 flowchart TD
     A[Super Admin] --> B[Sign in]
     B --> C[Dashboard]
-    C --> D[Institutions]
-    D --> E[Colleges]
-    E --> F[Users and Staff]
-    E --> G[Roles and Permissions]
+    C --> D[Colleges]
+    D --> E[Users and Staff]
+    D --> F[Batches]
+    D --> G[Roles and Permissions]
     C --> H[Subscription Plans]
-    H --> E
+    H --> D
     C --> I[Question Bank]
-    C --> J[Settings]
-    J --> K[Password Recovery]
+    C --> J[Roadmaps]
+    J --> K[Tasks and Assessments]
+    C --> L[Trainers]
+    C --> M[Reports and Monitoring]
+    C --> N[Settings]
+    N --> O[Password Recovery]
 ```
 
 ### Business hierarchy
 
 ```mermaid
 flowchart TB
-    I[Institution / Enterprise]
+    A[FC Labs Admin]
     C[College / Workspace]
     U[Users and Staff]
     R[Roles and Permissions]
     P[Plan Subscription]
+    B[Batches]
+    M[Roadmaps]
+    T[Trainers]
     Q[Question Bank]
-    I --> C
+    A --> C
     C --> U
     C --> R
     C --> P
+    C --> B
+    C --> M
+    C --> T
     C --> Q
 ```
 
 <table>
 <tr><th>Layer</th><th>Purpose</th><th>Owner of the action</th></tr>
 <tr><td>Authentication</td><td>Proves who the Admin is and creates a session.</td><td>Admin + Google/email</td></tr>
-<tr><td>Institution</td><td>Top-level customer organization.</td><td>Super Admin</td></tr>
-<tr><td>College</td><td>Workspace belonging to an institution.</td><td>Super Admin</td></tr>
+<tr><td>College</td><td>Top-level customer organization; backend name: Workspace.</td><td>Super Admin</td></tr>
 <tr><td>Users/Roles</td><td>People and permissions inside a college.</td><td>Super Admin</td></tr>
+<tr><td>Batches</td><td>Groups of students used for roadmap delivery.</td><td>Super Admin</td></tr>
 <tr><td>Plans</td><td>Features, credits, and subscriptions assigned to colleges.</td><td>Super Admin</td></tr>
-<tr><td>Questions</td><td>Shared general, MCQ, and coding content.</td><td>Super Admin</td></tr>
+<tr><td>Roadmaps/Trainers</td><td>Learning journeys, delivery ownership, tasks, and assessments.</td><td>Admin + Trainer</td></tr>
+<tr><td>Questions</td><td>Shared general, MCQ, and coding content used by assessments.</td><td>Admin + Trainer</td></tr>
 </table>
 
 ## 2. Sign in and session flow
@@ -88,7 +99,7 @@ sequenceDiagram
 <tr><td>
 <pre>
 ┌────────────────────────────┐
-│ QConnect Admin             │
+│ FC Labs Admin              │
 │ Sign in to your account    │
 │ [ Email                  ]  │
 │ [ Password               ]  │
@@ -100,11 +111,11 @@ sequenceDiagram
 </td><td>Google returns an ID token to the browser. The browser sends only the token to the backend. The backend extracts the email, checks <code>adminUser</code>, creates the application JWT, and sets the cookie.</td></tr>
 </table>
 
-## 3. Institution management
+## 3. Legacy QConnect institution flow (removed in FC Labs)
 
 ### User goal
 
-Create and maintain the top-level customer organization before adding colleges.
+In QConnect, the Admin created an Institution/Enterprise first and then added colleges below it. FC Labs removes this step: the Admin creates a College/Workspace directly. The flow remains here only to make the migration explicit.
 
 ```mermaid
 flowchart LR
@@ -139,22 +150,20 @@ flowchart TD
 └──────────────┴─────────────┴──────────────┴──────────────┘
 </pre>
 
-## 4. College management
+## 4. College management (FC Labs primary organization)
 
 ### User goal
 
-Add a college under an institution and maintain its accreditation, contact, and status information.
+Add and maintain a college directly. There is no Institution/Enterprise parent step in FC Labs.
 
 ```mermaid
 flowchart LR
-    A[Select institution] --> B[Open college list]
-    B --> C[Add college]
-    C --> D[Choose parent institution]
-    D --> E[Enter college and accreditation details]
-    E --> F[POST /workspace/:enterpriseId]
-    F --> G[College workspace created]
-    G --> H[Open college details]
-    H --> I[Manage users, roles, and plans]
+    A[Open college list] --> B[Add college]
+    B --> C[Enter college and accreditation details]
+    C --> D[POST /workspace]
+    D --> E[College workspace created]
+    E --> F[Open college details]
+    F --> G[Manage users, batches, roles, plans, roadmaps, and trainers]
 ```
 
 ```mermaid
@@ -368,28 +377,30 @@ flowchart TD
 ```mermaid
 sequenceDiagram
     actor A as Super Admin
-    A->>A: Sign in
-    A->>A: Open Institutions
-    A->>A: Create Institution
-    A->>A: Open institution details
-    A->>A: Add College / Workspace
+    A->>A: Sign in to FC Labs Admin
+    A->>A: Open Colleges
+    A->>A: Create College / Workspace
+    A->>A: Open college details
+    A->>A: Create batches
     A->>A: Add college users
-    A->>A: Create Manager role
-    A->>A: Assign Manager role to user
+    A->>A: Create roles and assign permissions
     A->>A: Create subscription plan
     A->>A: Assign plan to college
-    A->>A: Add shared questions
+    A->>A: Create roadmap and content
+    A->>A: Assign trainer to batch and roadmap
+    A->>A: Monitor tasks, assessments, and progress
     A->>A: Review college status
 ```
 
 ### Completion checklist
 
 - [ ] Admin account exists in `adminUser`.
-- [ ] Institution is created and active.
-- [ ] College is created under the institution.
+- [ ] College is created and active.
 - [ ] Initial users are added to the college.
+- [ ] Batches are created and students are assigned.
 - [ ] Roles and permissions are configured.
 - [ ] A plan is assigned with valid start/end dates.
+- [ ] Roadmaps, trainers, tasks, and assessments are configured.
 - [ ] Required questions are created or reviewed.
 - [ ] The college can proceed with its configured access.
 
